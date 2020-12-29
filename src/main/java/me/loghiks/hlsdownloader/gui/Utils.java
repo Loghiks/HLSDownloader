@@ -1,5 +1,7 @@
 package me.loghiks.hlsdownloader.gui;
 
+import me.loghiks.hlsdownloader.Main;
+
 import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
@@ -13,7 +15,7 @@ public class Utils {
 
     public static void displayErrorPopup(String message) {
 
-        JOptionPane.showMessageDialog(null, message, "Error", JOptionPane.ERROR_MESSAGE);
+        JOptionPane.showMessageDialog(null, message, Main.APP_NAME + " - Error", JOptionPane.ERROR_MESSAGE);
 
     }
 

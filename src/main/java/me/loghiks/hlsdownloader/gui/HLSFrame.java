@@ -15,10 +15,7 @@ import java.io.File;
 
 public class HLSFrame extends JFrame {
 
-    public static HLSFrame INSTANCE;
-
-                                                    //TODO
-    private static final String[] TYPES = {"File", /*"Url"*/};
+    private static final String[] TYPES = {"File", "Url"};
 
     private final JButton selectButton = new JButton("Select File");
     private final JComboBox<String> inputTypeChooser = new JComboBox<>(TYPES);
@@ -28,11 +25,8 @@ public class HLSFrame extends JFrame {
     private final JProgressBar progressBar = new JProgressBar();
 
     private File selectedFile;
-    private File outputFile;
 
-    public HLSFrame() throws HeadlessException {
-
-        INSTANCE = this;
+    private HLSFrame() throws HeadlessException {
 
         this.setTitle(Main.APP_NAME);
         this.setSize(400, 260);
@@ -49,6 +43,8 @@ public class HLSFrame extends JFrame {
         setupProgressBar();
 
     }
+
+    /*_________________________ SETUP COMPONENTS _________________________*/
 
     private void setupSelectButton() {
 
@@ -72,10 +68,10 @@ public class HLSFrame extends JFrame {
                     selectedFile = fileChooser.getSelectedFile();
                     inputField.setText(selectedFile.getAbsolutePath());
 
-                    outputFile = new File(fileChooser.getFileSystemView().getDefaultDirectory(),
-                            selectedFile.getName().split("\\.")[0] + ".mp4");
+                    String outputPath = fileChooser.getFileSystemView().getDefaultDirectory().getAbsolutePath() +
+                            File.separator + selectedFile.getName().split("\\.")[0] + ".mp4";
 
-                    outputField.setText(outputFile.getAbsolutePath());
+                    outputField.setText(outputPath);
 
                 }
 
@@ -95,10 +91,7 @@ public class HLSFrame extends JFrame {
 
         inputTypeChooser.addActionListener(e -> {
 
-            selectedFile = null;
-            outputFile = null;
-            inputField.setText("");
-            outputField.setText("");
+            resetFields();
 
             boolean flag = inputTypeChooser.getSelectedIndex() == 0;
 
@@ -130,9 +123,10 @@ public class HLSFrame extends JFrame {
 
                 if(inputField.getText().isEmpty() || inputTypeChooser.getSelectedIndex() != 1) return;
 
-                outputFile = new File(FileSystemView.getFileSystemView().getDefaultDirectory(), "video-" + System.currentTimeMillis() + ".mp4");
+                String outputPath = FileSystemView.getFileSystemView().getDefaultDirectory().getAbsolutePath() +
+                        File.separator + "video-" + System.currentTimeMillis() + ".mp4";
 
-                outputField.setText(outputFile.getAbsolutePath());
+                outputField.setText(outputPath);
 
             }
 
@@ -153,20 +147,6 @@ public class HLSFrame extends JFrame {
 
         outputField.setBounds(10, 120, 350, 30);
 
-        outputField.addKeyListener(new KeyAdapter() {
-
-            @Override
-            public void keyReleased(KeyEvent e) {
-
-                if(inputField.getText().isEmpty() || outputField.getText().isEmpty()) return;
-
-                //Not the best way
-                outputFile = new File(outputField.getText());
-
-            }
-
-        });
-
         this.add(outputField);
 
     }
@@ -184,14 +164,62 @@ public class HLSFrame extends JFrame {
 
                 downloadButton.setEnabled(false);
 
-                //TODO: add checks and url support
+                if(!outputField.getText().endsWith(".mp4")){
+
+                    Utils.displayErrorPopup("Output file must end with .mp4 !");
+                    downloadButton.setEnabled(true);
+                    return;
+
+                }
+
+                File outputFile = new File(outputField.getText());
+
+                if(outputFile.exists()) {
+
+                    int result = JOptionPane.showConfirmDialog(HLSFrame.this,
+                            "The output file already exist, do you want to overwrite it ?",
+                            Main.APP_NAME,
+                            JOptionPane.YES_NO_OPTION,
+                            JOptionPane.QUESTION_MESSAGE);
+
+                    if(result == JOptionPane.NO_OPTION || result == JOptionPane.CLOSED_OPTION) {
+
+                        downloadButton.setEnabled(true);
+                        return;
+
+                    }
+
+                }
 
                 inputTypeChooser.setEnabled(false);
                 selectButton.setEnabled(false);
                 inputField.setEnabled(false);
                 outputField.setEnabled(false);
 
-                Downloader downloader = new Downloader(selectedFile, outputFile);
+                Downloader downloader = inputTypeChooser.getSelectedIndex() == 0 ?
+                        new Downloader(selectedFile, outputFile) :
+                        new Downloader(inputField.getText(), outputFile);
+
+                downloader.onInit(HLSFrame.this::initProgressBar);
+                downloader.onProgress(HLSFrame.this::updateProgressBar);
+
+                downloader.onError(throwable -> {
+
+                    Utils.displayErrorPopup("An error has occurred while downloading the video: " + throwable.getMessage());
+                    resetAll();
+
+                });
+
+                downloader.whenDone(outFile -> {
+
+                    JOptionPane.showMessageDialog(null, "The video has been downloaded",
+                            Main.APP_NAME + " - Download complete",
+                            JOptionPane.INFORMATION_MESSAGE);
+
+                    Main.browseFile(outFile);
+                    resetAll();
+
+                });
 
                 downloader.start();
 
@@ -213,6 +241,8 @@ public class HLSFrame extends JFrame {
 
     }
 
+    /*_________________________ PROGRESS BAR STATUS _________________________*/
+
     public void initProgressBar(int max) {
 
         progressBar.setStringPainted(true);
@@ -226,6 +256,45 @@ public class HLSFrame extends JFrame {
 
         progressBar.setValue(progress);
         progressBar.setString("Downloading... " + percentage + "% (" + progress + "/" + progressBar.getMaximum() + ")");
+
+    }
+
+    /*_________________________ MISC _________________________*/
+
+    private void resetFields() {
+
+        selectedFile = null;
+        inputField.setText("");
+        outputField.setText("");
+        progressBar.setStringPainted(false);
+
+    }
+
+    private void resetAll() {
+
+        resetFields();
+
+        inputTypeChooser.setEnabled(true);
+        selectButton.setEnabled(true);
+        outputField.setEnabled(true);
+        downloadButton.setEnabled(true);
+
+        inputField.setEnabled(false);
+
+        inputTypeChooser.setSelectedIndex(0);
+
+    }
+
+    public static void display() {
+
+        try {
+
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+
+        } catch (ClassNotFoundException | InstantiationException |
+                IllegalAccessException | UnsupportedLookAndFeelException ignored) { }
+
+        new HLSFrame().setVisible(true);
 
     }
 

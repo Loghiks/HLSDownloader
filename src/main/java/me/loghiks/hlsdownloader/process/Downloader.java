@@ -1,7 +1,7 @@
 package me.loghiks.hlsdownloader.process;
 
+import me.loghiks.hlsdownloader.Main;
 import me.loghiks.hlsdownloader.gui.HLSFrame;
-import me.loghiks.hlsdownloader.gui.Utils;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -10,24 +10,43 @@ import okio.BufferedSink;
 import okio.Okio;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
 import java.util.function.Consumer;
 
 public class Downloader extends Thread {
 
     private static final OkHttpClient client = new OkHttpClient();
 
-    private final File m3u8, output;
-    private Consumer<File> whenDone;
+    private File file;
+    private String url;
 
-    public Downloader(File m3u8, File output) {
-        this.m3u8 = m3u8;
+    private final File output;
+
+    private Consumer<File> whenDone;
+    private Consumer<Throwable> errorConsumer;
+
+    private Consumer<Integer> initConsumer;
+    private Consumer<Integer> progressConsumer;
+
+    public Downloader(File file, File output) {
+        this(output);
+
+        this.file = file;
+    }
+
+    public Downloader(String url, File output) {
+        this(output);
+
+        this.url = url;
+
+    }
+
+    private Downloader(File output) {
+        super(Main.APP_NAME + " - Downloader Thread");
+
         this.output = output;
+
     }
 
     public void whenDone(Consumer<File> out) {
@@ -36,31 +55,47 @@ public class Downloader extends Thread {
 
     }
 
+    public void onError(Consumer<Throwable> errorConsumer) {
+
+        this.errorConsumer = errorConsumer;
+
+    }
+
+    public void onInit(Consumer<Integer> initConsumer) {
+
+        this.initConsumer = initConsumer;
+
+    }
+
+    public void onProgress(Consumer<Integer> progressConsumer) {
+
+        this.progressConsumer = progressConsumer;
+
+    }
+
     @Override
     public void run() {
 
-        List<String> urls;
-
         try {
-            urls = extractUrls();
-        } catch (FileNotFoundException e) {
-            Utils.displayErrorPopup("HLS file can't be read !");
-            System.exit(74);
-            return;
-        }
 
-        try {
+            List<String> urls = file != null ? HLSParser.parseFile(file) : HLSParser.parseUrl(url);
+
             download(urls);
-        } catch (IOException e) {
-            Utils.displayErrorPopup("Unable to download the video !");
-            System.exit(75);
+
+        } catch (Throwable e) {
+
+            if(errorConsumer != null) errorConsumer.accept(e);
+
+            if(Main.isCLIMode())
+                System.err.println("An error has occurred while downloading the video: " + e.getMessage());
+
         }
 
     }
 
     private void download(List<String> urls) throws IOException {
 
-        HLSFrame.INSTANCE.initProgressBar(urls.size());
+        if(initConsumer != null) initConsumer.accept(urls.size());
 
         output.getParentFile().mkdirs();
         output.createNewFile();
@@ -85,7 +120,8 @@ public class Downloader extends Thread {
 
             }
 
-            HLSFrame.INSTANCE.updateProgressBar(index);
+            if(initConsumer != null && progressConsumer != null)
+                progressConsumer.accept(index);
 
             index++;
         }
@@ -93,35 +129,6 @@ public class Downloader extends Thread {
         sink.close();
 
         if(whenDone != null) whenDone.accept(output);
-
-    }
-
-    private List<String> extractUrls() throws FileNotFoundException {
-
-        List<String> urls = new ArrayList<>();
-
-        Scanner scanner = new Scanner(new FileInputStream(m3u8));
-
-        String line;
-
-        while ((line = scanner.nextLine()) != null) {
-
-            if(line.startsWith("#EXTINF")) {
-
-                String url = scanner.nextLine();
-
-                if(url != null) urls.add(url);
-                else break;
-
-            }
-
-            if(line.startsWith("#EXT-X-ENDLIST")) break;
-
-        }
-
-        scanner.close();
-
-        return urls;
 
     }
 
