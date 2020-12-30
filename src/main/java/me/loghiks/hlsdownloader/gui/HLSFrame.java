@@ -1,6 +1,7 @@
 package me.loghiks.hlsdownloader.gui;
 
 import me.loghiks.hlsdownloader.Main;
+import me.loghiks.hlsdownloader.Utils;
 import me.loghiks.hlsdownloader.process.Downloader;
 
 import javax.swing.*;
@@ -216,7 +217,7 @@ public class HLSFrame extends JFrame {
                             Main.APP_NAME + " - Download complete",
                             JOptionPane.INFORMATION_MESSAGE);
 
-                    Main.browseFile(outFile);
+                    Utils.browseFile(outFile);
                     resetAll();
 
                 });
@@ -267,6 +268,8 @@ public class HLSFrame extends JFrame {
         inputField.setText("");
         outputField.setText("");
         progressBar.setStringPainted(false);
+        progressBar.setValue(0);
+        progressBar.setMaximum(100);
 
     }
 

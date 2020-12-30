@@ -86,9 +86,6 @@ public class Downloader extends Thread {
 
             if(errorConsumer != null) errorConsumer.accept(e);
 
-            if(Main.isCLIMode())
-                System.err.println("An error has occurred while downloading the video: " + e.getMessage());
-
         }
 
     }
