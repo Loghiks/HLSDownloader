@@ -1,4 +1,6 @@
 # HLSDownloader
+[![License: MIT](https://img.shields.io/badge/License-MIT-orange)](LICENSE)
+
 HLSDownloader is a simple tool that allow you to download m3u8 file to mp4.
 
 * [Download](https://github.com/Loghiks/HLSDownloader/releases)
