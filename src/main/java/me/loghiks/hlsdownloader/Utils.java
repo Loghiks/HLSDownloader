@@ -19,7 +19,7 @@ public class Utils {
 
     }
 
-    public static void printStackTrace(File file, Throwable throwable) {
+    public static boolean printStackTrace(File file, Throwable throwable) {
 
         try {
 
@@ -29,7 +29,13 @@ public class Utils {
 
             printStream.close();
 
-        }catch (IOException ignored) { }
+            return true;
+
+        }catch (IOException e) {
+
+            return false;
+
+        }
 
     }
 

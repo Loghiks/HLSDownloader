@@ -125,7 +125,10 @@ public class CLI {
 
                 File file = new File(FileSystemView.getFileSystemView().getDefaultDirectory(), Main.APP_NAME + "_error_" + System.currentTimeMillis() + ".txt");
 
-                Utils.printStackTrace(file, throwable);
+                boolean success = Utils.printStackTrace(file, throwable);
+
+                if(success) System.out.println("Error stack trace can be found at : " + file.getAbsolutePath());
+                else System.err.println("Unable to print stacktrace into " + file.getAbsolutePath());
 
             }
 
