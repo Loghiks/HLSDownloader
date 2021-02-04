@@ -4,6 +4,7 @@ import java.io.*;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class HLSParser {
 
@@ -39,7 +40,16 @@ public class HLSParser {
         if(inputStream == null)
             throw new NullPointerException("Unable to read the url content !");
 
+        String partialUrl = urlStr.substring(0,urlStr.lastIndexOf('/')) + '/';
+
         List<String> urls = readSegmentsUrls(inputStream);
+
+        //adding the partial url to the relative ones
+        for (int i = 0; i < urls.size(); i++) {
+            if(!urls.get(i).contains("://")){
+                urls.set(i, partialUrl + urls.get(i));
+            }
+        }
 
         if(urls.isEmpty())
             throw new IllegalStateException("No URL(s) found in the provided file !");
@@ -88,7 +98,7 @@ public class HLSParser {
 
                     if(split.length == 2) nextLine = split[1].trim();
 
-                    if(nextLine.startsWith("http")) result.add(nextLine);
+                    if(nextLine.startsWith("http") || nextLine.contains(".ts")) result.add(nextLine);
 
                 }
 
