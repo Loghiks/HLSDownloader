@@ -3,7 +3,10 @@ package me.loghiks.hlsdownloader.process;
 import java.io.*;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.stream.Collectors;
 
 public class HLSParser {
 
@@ -39,7 +42,7 @@ public class HLSParser {
         if(inputStream == null)
             throw new NullPointerException("Unable to read the url content !");
 
-        List<String> urls = readSegmentsUrls(inputStream);
+        List<String> urls = readSegmentsUrls(inputStream, urlStr.substring(0, urlStr.lastIndexOf('/')+1));
 
         if(urls.isEmpty())
             throw new IllegalStateException("No URL(s) found in the provided file !");
@@ -48,7 +51,7 @@ public class HLSParser {
 
     }
 
-    private static List<String> readSegmentsUrls(InputStream inputStream) throws IOException {
+    private static List<String> readSegmentsUrls(InputStream inputStream, String... partialUrl) throws IOException {
 
         List<String> lines = readAllLines(inputStream);
 
@@ -62,7 +65,6 @@ public class HLSParser {
             throw new IllegalArgumentException("The file must end with " + END_KEY);
 
         List<String> result = new ArrayList<>();
-
 
         // Checks can be improved
         for (int i = 0; i < lines.size(); i++) {
@@ -88,7 +90,14 @@ public class HLSParser {
 
                     if(split.length == 2) nextLine = split[1].trim();
 
-                    if(nextLine.startsWith("http")) result.add(nextLine);
+                    if(!nextLine.startsWith("http")) {
+
+                        if(partialUrl.length > 0) nextLine = partialUrl[0] + nextLine;
+                        else throw new IllegalArgumentException("The url doesn't start with 'http' and there is no partial url provided !");
+
+                    }
+
+                    result.add(nextLine);
 
                 }
 
