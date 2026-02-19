@@ -1,22 +1,17 @@
 package me.loghiks.hlsdownloader.process;
 
 import me.loghiks.hlsdownloader.Main;
-import me.loghiks.hlsdownloader.gui.HLSFrame;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
-import okio.BufferedSink;
-import okio.Okio;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.function.Consumer;
 
 public class Downloader extends Thread {
-
-    private static final OkHttpClient client = new OkHttpClient();
 
     private File file;
     private String url;
@@ -97,23 +92,21 @@ public class Downloader extends Thread {
         output.getParentFile().mkdirs();
         output.createNewFile();
 
-        BufferedSink sink = Okio.buffer(Okio.sink(output));
+        BufferedOutputStream out = new BufferedOutputStream(Files.newOutputStream(output.toPath()));
 
         int index = 1;
         for (String url : urls) {
 
-            Request request = new Request.Builder().url(url).build();
+            try (BufferedInputStream in = new BufferedInputStream(new URL(url).openStream())) {
 
-            Response response = client.newCall(request).execute();
+                byte[] dataBuffer = new byte[1024];
+                int bytesRead;
 
-            ResponseBody body = response.body();
+                while ((bytesRead = in.read(dataBuffer, 0, dataBuffer.length)) != -1) {
+                    out.write(dataBuffer, 0, bytesRead);
+                }
 
-            if(body != null) {
-
-                sink.writeAll(body.source());
-                sink.flush();
-
-                body.close();
+                out.flush();
 
             }
 
@@ -123,7 +116,8 @@ public class Downloader extends Thread {
             index++;
         }
 
-        sink.close();
+        out.close();
+
 
         if(whenDone != null) whenDone.accept(output);
 
